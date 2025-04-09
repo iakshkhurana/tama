@@ -1,6 +1,7 @@
-import { loadTodos} from './todos/load.js';
-import { completeTodo} from './todos/complete.js';
-import { deleteTodos} from './todos/delete.js';
+import { loadTodos } from './todos/load.js';
+import { completeTodo } from './todos/complete.js';
+import { deleteTodo } from './todos/delete.js';
+import { addTodo } from './todos/add.js';
 
 let isSigningUp = false;
 let isAddingTodo = false;
@@ -71,6 +72,27 @@ document.getElementById('signin-form').addEventListener('submit', (e) => {
     }
 });
 
+// Adding Todo on Form Submission
+document.getElementById('todo-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (isAddingTodo) return;
+    isAddingTodo = true;
+
+    const todoInput = document.getElementById('todo-input');
+    const todoText = todoInput.value.trim();
+    if (!todoText) {
+        isAddingTodo = false;
+        return;
+    }
+
+    // Use the imported addTodo function
+    addTodo(todoText);
+    
+    todoInput.value = '';
+    loadTodos();
+    isAddingTodo = false;
+});
+
 // Toggle between Signup and Signin
 document.getElementById('show-signin').addEventListener('click', (e) => {
     e.preventDefault();
@@ -84,38 +106,51 @@ document.getElementById('show-signup').addEventListener('click', (e) => {
     document.getElementById('signup-component').style.display = 'block';
 });
 
-document.getElementById('todo-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (isAddingTodo) return;
-    isAddingTodo = true;
-
-    const todoInput = document.getElementById('todo-input');
-    const todoText = todoInput.value.trim();
-    if (!todoText) {
-        isAddingTodo = false;
-        return;
-    }
-
+// Load Todos
+function loadTodos() {
     const currentUser = localStorage.getItem('currentUser');
-    if (!currentUser) {
-        isAddingTodo = false;
-        return;
-    }
-
-    // Get todos from localStorage
+    if (!currentUser) return;
+    
     const todos = JSON.parse(localStorage.getItem(`todos_${currentUser}`) || '[]');
+    const todoList = document.getElementById('todo-list');
+    todoList.innerHTML = '';
+
+    todos.forEach(todo => {
+        const li = document.createElement('li');
+        li.innerHTML = `<span>${todo.title}</span>`;
+        
+        if (todo.completed) {
+            li.style.textDecoration = 'line-through';
+        }
+
+        const completeButton = document.createElement('button');
+        completeButton.textContent = todo.completed ? 'Undo' : 'Complete';
+        completeButton.onclick = () => {
+            // Use the imported completeTodo function
+            completeTodo(todo.id, !todo.completed);
+            loadTodos();
+        };
+
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete';
+        deleteButton.onclick = () => {
+            deleteTodo(todo.id);
+        };
+
+        li.appendChild(completeButton);
+        li.appendChild(deleteButton);
+        todoList.appendChild(li);
+    });
+}
+
+// Delete Todo
+function deleteTodo(id) {
+    const currentUser = localStorage.getItem('currentUser');
+    if (!currentUser) return;
     
-    // Add new todo
-    const newTodo = {
-        id: Date.now().toString(),
-        title: todoText,
-        completed: false
-    };
+    const todos = JSON.parse(localStorage.getItem(`todos_${currentUser}`) || '[]');
+    const filteredTodos = todos.filter(todo => todo.id !== id);
     
-    todos.push(newTodo);
-    localStorage.setItem(`todos_${currentUser}`, JSON.stringify(todos));
-    
-    todoInput.value = '';
+    localStorage.setItem(`todos_${currentUser}`, JSON.stringify(filteredTodos));
     loadTodos();
-    isAddingTodo = false;
-});
+}
